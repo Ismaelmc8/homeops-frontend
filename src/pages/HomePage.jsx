@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { tasksApi, metricsApi, goalsApi } from "../api/homeops.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import TaskCard from "../components/TaskCard.jsx";
@@ -233,6 +234,9 @@ export default function HomePage() {
 
       <div className="home-header">
         <p className="home-summary">{data.homeSummary}</p>
+        <Link to="/mapa" className="home-map-cta">
+          Ver mapa del hogar →
+        </Link>
         <div className="home-meta">
           {metrics && (
             <>

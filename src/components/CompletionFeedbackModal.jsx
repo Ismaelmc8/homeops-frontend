@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { socialApi } from "../api/homeops.js";
+import TaskTimer from "./TaskTimer.jsx";
 
 export default function CompletionFeedbackModal({ task, onSubmit, onClose, submitting }) {
   const [catalog, setCatalog] = useState(null);
@@ -43,13 +44,19 @@ export default function CompletionFeedbackModal({ task, onSubmit, onClose, submi
         </p>
 
         <form onSubmit={handleSubmit} className="completion-feedback-form">
+          <TaskTimer
+            expectedMin={task.durationMin}
+            onElapsed={(mins) => {
+              if (mins != null) setDurationActual(String(mins));
+            }}
+          />
           <label className="task-duration-field">
-            <span className="sr-only">Minutos que tardaste</span>
+            <span className="field-hint">Minutos reales (opcional, mejora bonus eficiencia)</span>
             <input
               type="number"
               min="1"
               max="999"
-              placeholder={`Tiempo real (~${task.durationMin} min)`}
+              placeholder={`~${task.durationMin} min`}
               value={durationActual}
               onChange={(e) => setDurationActual(e.target.value)}
               className="task-duration-input"

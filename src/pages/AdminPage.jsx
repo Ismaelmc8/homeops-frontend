@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi } from "../api/homeops.js";
+import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi, templatesApi } from "../api/homeops.js";
 
 const TABS = [
   { id: "family", label: "Familia", step: 1 },
   { id: "zones", label: "Zonas", step: 2 },
   { id: "tasks", label: "Tareas", step: 3 },
-  { id: "events", label: "Eventos", step: 4 },
-  { id: "rewards", label: "Recompensas", step: 5 },
+  { id: "templates", label: "Plantillas", step: 4 },
+  { id: "events", label: "Eventos", step: 5 },
+  { id: "rewards", label: "Recompensas", step: 6 },
 ];
 
 const MEMBER_STATUS = {
@@ -100,6 +101,18 @@ const EMPTY_EVENT_FORM = {
 };
 const EMPTY_REWARD_FORM = { name: "", costCoins: 50 };
 const EMPTY_INVITE_FORM = { email: "" };
+const EMPTY_TEMPLATE_FORM = {
+  name: "",
+  zoneId: "",
+  taskType: "recurrent_light",
+  difficulty: 2,
+  durationMin: 15,
+  frequencyIdealDays: 2,
+  frequencyToleranceDays: 1,
+  frequencyCriticalDays: 3,
+  isMicro: false,
+  isCooperative: false,
+};
 
 export default function AdminPage() {
   const [tab, setTab] = useState("family");
@@ -128,9 +141,12 @@ export default function AdminPage() {
     mvpEnabled: false,
     rankingEnabled: false,
   });
+  const [templates, setTemplates] = useState([]);
+  const [templateForm, setTemplateForm] = useState(EMPTY_TEMPLATE_FORM);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
 
   const load = useCallback(async () => {
-    const [m, z, t, r, metrics, balance, ev, social] = await Promise.all([
+    const [m, z, t, r, metrics, balance, ev, social, tpl] = await Promise.all([
       membersApi.list(),
       zonesApi.list(),
       tasksApi.list(),
@@ -139,6 +155,7 @@ export default function AdminPage() {
       metricsApi.balance().catch(() => null),
       eventsApi.list().catch(() => []),
       socialApi.settings().catch(() => ({ mvpEnabled: false, rankingEnabled: false })),
+      templatesApi.list().catch(() => []),
     ]);
     setMembers(m);
     setZones(z);
@@ -148,8 +165,10 @@ export default function AdminPage() {
     setBalanceMetrics(balance);
     setEvents(ev);
     setSocialSettings(social);
+    setTemplates(tpl);
     if (z.length) {
       setTaskForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
+      setTemplateForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
     }
   }, []);
 
@@ -269,6 +288,57 @@ export default function AdminPage() {
       load();
     } catch (err) {
       flash(err.message || "No se pudo guardar la tarea");
+    }
+  }
+
+  async function saveTemplate(e) {
+    e.preventDefault();
+    const payload = {
+      ...templateForm,
+      zoneId: templateForm.zoneId ? Number(templateForm.zoneId) : null,
+      isMicro: templateForm.taskType === "micro" || templateForm.isMicro,
+    };
+    try {
+      if (editingTemplateId) {
+        await templatesApi.update(editingTemplateId, payload);
+        setEditingTemplateId(null);
+        setTemplateForm(EMPTY_TEMPLATE_FORM);
+        flash("Plantilla actualizada");
+      } else {
+        await templatesApi.create(payload);
+        setTemplateForm((f) => ({ ...EMPTY_TEMPLATE_FORM, zoneId: f.zoneId }));
+        flash("Plantilla guardada");
+      }
+      load();
+    } catch (err) {
+      flash(err.message || "No se pudo guardar la plantilla");
+    }
+  }
+
+  async function applyTemplate(tpl) {
+    const zoneId = tpl.zoneId || zones[0]?.id;
+    if (!zoneId) {
+      flash("Crea una zona antes de aplicar plantillas.");
+      return;
+    }
+    if (!window.confirm(`¿Crear tarea activa «${tpl.name}» en el hogar?`)) return;
+    try {
+      await templatesApi.apply(tpl.id, { zoneId });
+      flash("Tarea creada desde plantilla");
+      load();
+    } catch (err) {
+      flash(err.message || "No se pudo aplicar");
+    }
+  }
+
+  async function deleteTemplate(tpl) {
+    if (!window.confirm(`¿Borrar plantilla «${tpl.name}»?`)) return;
+    try {
+      await templatesApi.remove(tpl.id);
+      flash("Plantilla eliminada");
+      load();
+    } catch (err) {
+      flash(err.message);
     }
   }
 
@@ -908,6 +978,67 @@ export default function AdminPage() {
                   <button type="button" className="btn-danger" onClick={() => deleteTask(t)}>
                     Borrar
                   </button>
+                </div>
+              </li>
+            ))}
+          </ItemList>
+        </section>
+      )}
+
+      {tab === "templates" && (
+        <section className="admin-panel" aria-labelledby="templates-heading">
+          <h2 id="templates-heading">Plantillas de tareas</h2>
+          <p className="field-hint field-hint-block">
+            Guarda configuraciones reutilizables. Aplicar una plantilla crea una tarea nueva (no sustituye las existentes).
+          </p>
+          <form onSubmit={saveTemplate} className="admin-form">
+            <Field id="tpl-name" label="Nombre de plantilla">
+              <input
+                id="tpl-name"
+                value={templateForm.name}
+                onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                required
+              />
+            </Field>
+            <Field id="tpl-zone" label="Zona por defecto">
+              <select
+                id="tpl-zone"
+                value={templateForm.zoneId}
+                onChange={(e) => setTemplateForm({ ...templateForm, zoneId: e.target.value })}
+              >
+                <option value="">Sin zona fija</option>
+                {zones.map((z) => (
+                  <option key={z.id} value={z.id}>{z.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field id="tpl-type" label="Tipo">
+              <select
+                id="tpl-type"
+                value={templateForm.taskType}
+                onChange={(e) => setTemplateForm({ ...templateForm, taskType: e.target.value })}
+              >
+                {TASK_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </Field>
+            <button type="submit" className="btn-primary">
+              {editingTemplateId ? "Guardar plantilla" : "Crear plantilla"}
+            </button>
+          </form>
+          <ItemList empty={!templates.length}>
+            {templates.map((tpl) => (
+              <li key={tpl.id} className="admin-list-item">
+                <div>
+                  <strong>{tpl.name}</strong>
+                  <p className="item-meta">
+                    {tpl.zoneName || "Cualquier zona"} · {tpl.taskType} · {tpl.durationMin} min
+                  </p>
+                </div>
+                <div className="item-actions">
+                  <button type="button" onClick={() => applyTemplate(tpl)}>Aplicar</button>
+                  <button type="button" className="btn-danger" onClick={() => deleteTemplate(tpl)}>Borrar</button>
                 </div>
               </li>
             ))}

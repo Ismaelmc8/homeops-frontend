@@ -11,6 +11,8 @@ import WalletPage from "./pages/WalletPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import TimelinePage from "./pages/TimelinePage.jsx";
+import MapPage from "./pages/MapPage.jsx";
+import ZoneRoomPage from "./pages/ZoneRoomPage.jsx";
 import "./App.css";
 
 function PrivateRoute({ adminOnly = false }) {
@@ -36,6 +38,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route element={<PrivateRoute />}>
             <Route index          element={<HomePage />} />
+            <Route path="mapa" element={<MapPage />} />
+            <Route path="mapa/zona/:zoneId" element={<ZoneRoomPage />} />
             <Route path="recompensas" element={<WalletPage />} />
             <Route path="historial" element={<TimelinePage />} />
             <Route path="perfil"      element={<ProfilePage />} />

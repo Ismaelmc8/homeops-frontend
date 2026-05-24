@@ -18,6 +18,46 @@ export const authApi = {
     }),
 };
 
+export const visualizationApi = {
+  overview: () => apiFetch("/api/visualization/overview", { auth: true }),
+  heatmap: (days = 30) =>
+    apiFetch(`/api/visualization/heatmap?days=${days}`, { auth: true }),
+  zone: (zoneId) => apiFetch(`/api/visualization/zones/${zoneId}`, { auth: true }),
+  updateLayout: (zones) =>
+    apiFetch("/api/visualization/layout", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify({ zones }),
+      headers: { "Content-Type": "application/json" },
+    }),
+};
+
+export const templatesApi = {
+  list: () => apiFetch("/api/templates", { auth: true }),
+  create: (body) =>
+    apiFetch("/api/templates", {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  update: (id, body) =>
+    apiFetch(`/api/templates/${id}`, {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  remove: (id) => apiFetch(`/api/templates/${id}`, { method: "DELETE", auth: true }),
+  apply: (id, body) =>
+    apiFetch(`/api/templates/${id}/apply`, {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+};
+
 export const tasksApi = {
   kanban: ({ microOnly = false, assignedToMe = false } = {}) => {
     const q = new URLSearchParams();
@@ -39,6 +79,21 @@ export const tasksApi = {
   update: (id, body) =>
     apiFetch(`/api/tasks/${id}`, { method: "PUT", auth: true, body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
   remove: (id) => apiFetch(`/api/tasks/${id}`, { method: "DELETE", auth: true }),
+  postpone: (id, days = 1) =>
+    apiFetch(`/api/tasks/${id}/postpone`, {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify({ days }),
+      headers: { "Content-Type": "application/json" },
+    }),
+  split: (id) => apiFetch(`/api/tasks/${id}/split`, { method: "POST", auth: true }),
+  quickMicro: (body) =>
+    apiFetch("/api/tasks/quick-micro", {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
 };
 
 export const zonesApi = {
