@@ -203,17 +203,44 @@ export default function MapPage() {
             {overview.stableZonesCount}/{overview.totalZones} zonas estables
           </span>
         </div>
-        <div className="map-stat-card">
-          <span className="map-stat-label">Energía del hogar</span>
-          <strong className="map-stat-value">{overview.homeXp}</strong>
-          <span className="map-stat-sub">XP sumada del equipo</span>
+        <div className={`map-stat-card map-stat-card--living meta-base--${overview.livingBase?.state ?? "stable"}`}>
+          <span className="map-stat-label">Base viva</span>
+          <strong className="map-stat-value">{overview.livingBase?.label ?? "—"}</strong>
+          <span className="map-stat-sub">
+            {overview.livingBase?.buffPercent > 0
+              ? `+${overview.livingBase.buffPercent}% monedas`
+              : "Sin buff activo"}
+          </span>
         </div>
         <div className="map-stat-card">
-          <span className="map-stat-label">Pendientes</span>
-          <strong className="map-stat-value">{overview.pendingTasksTotal}</strong>
-          <span className="map-stat-sub">tareas en cola</span>
+          <span className="map-stat-label">Temporada</span>
+          <strong className="map-stat-value">
+            {overview.season?.emoji} S{overview.season?.weekInSeason}/{overview.season?.weeksTotal}
+          </strong>
+          <span className="map-stat-sub">{overview.season?.name}</span>
         </div>
       </section>
+
+      {overview.recoveryPlan && (
+        <section className="meta-recovery-panel" role="status">
+          <h2 className="map-panel-title">Plan de recuperación gradual</h2>
+          <p>{overview.recoveryPlan.message}</p>
+          <p className="muted">{overview.recoveryPlan.collapsedZones} zona(s) en colapso.</p>
+        </section>
+      )}
+
+      {overview.bossMissions?.length > 0 && (
+        <section className="meta-boss-panel" role="alert">
+          <h2 className="map-panel-title">Boss activos</h2>
+          <ul className="meta-boss-list">
+            {overview.bossMissions.map((b) => (
+              <li key={b.id}>
+                <Link to={`/mapa/zona/${b.zoneId}`}>{b.zoneName}</Link> — misión de rescate cooperativa
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <ChaosGauge value={overview.chaosRisk} />
 

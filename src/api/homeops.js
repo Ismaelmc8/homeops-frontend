@@ -18,6 +18,17 @@ export const authApi = {
     }),
 };
 
+export const metaApi = {
+  dashboard: () => apiFetch("/api/meta/dashboard", { auth: true }),
+  updateSettings: (body) =>
+    apiFetch("/api/meta/settings", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+};
+
 export const visualizationApi = {
   overview: () => apiFetch("/api/visualization/overview", { auth: true }),
   heatmap: (days = 30) =>

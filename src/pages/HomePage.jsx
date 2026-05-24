@@ -182,7 +182,48 @@ export default function HomePage() {
         </section>
       )}
 
-      {data.activeEvent && (
+      {data.meta?.livingBase && (
+        <div className={`meta-base-banner meta-base--${data.meta.livingBase.state}`} role="status">
+          <strong>{data.meta.livingBase.label}</strong>
+          {data.meta.livingBase.buffPercent > 0 && (
+            <span> · +{data.meta.livingBase.buffPercent}% monedas</span>
+          )}
+          {data.meta.livingBase.alert && <p>{data.meta.livingBase.alert}</p>}
+        </div>
+      )}
+
+      {data.meta?.dailyMission && !data.meta.dailyMission.completed && (
+        <section className="meta-daily-banner">
+          <span>Misión del día</span>
+          <strong>{data.meta.dailyMission.label}</strong>
+          <span className="meta-daily-progress">
+            {data.meta.dailyMission.progress}/{data.meta.dailyMission.target}
+          </span>
+        </section>
+      )}
+
+      {data.meta?.bossMissions?.length > 0 && (
+        <div className="meta-boss-banner" role="alert">
+          <strong>⚔️ Boss de suciedad</strong>
+          <p>
+            {data.meta.bossMissions.map((b) => b.zoneName).join(", ")} — misión cooperativa de rescate (restaura la zona, no premia el caos).
+          </p>
+        </div>
+      )}
+
+      {data.meta?.randomBonusActive && (
+        <div className="event-banner event-banner--random" role="status">
+          <strong>✨ Impulso sorpresa</strong>
+          <p>+15% monedas en todas las tareas hasta {new Date(data.meta.randomBonusActive.endsAt).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}.</p>
+        </div>
+      )}
+
+      {data.meta?.randomEventSpawned && (
+        <p className="toast" role="status">{data.meta.randomEventSpawned.label}</p>
+      )}
+
+      {data.activeEvent &&
+        ["speedrun", "perfect_day"].includes(data.activeEvent.eventType) && (
         <div className="event-banner" role="status">
           <strong>
             {data.activeEvent.eventType === "speedrun" ? "⚡ Speedrun" : "✨ Día perfecto"}

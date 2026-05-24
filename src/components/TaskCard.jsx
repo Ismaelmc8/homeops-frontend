@@ -18,6 +18,7 @@ export default function TaskCard({ task, onRequestComplete, completing }) {
           )}
           {task.isMicro && <span className="badge badge-micro">Micro</span>}
           {task.isCooperative && <span className="badge badge-coop">Cooperativa</span>}
+          {task.isBoss && <span className="badge badge-boss">Boss</span>}
           {task.assignees?.length > 0 && (
             <span className="badge badge-assignee">
               {task.assignees.map((a) => a.name).join(", ")}

@@ -2069,3 +2069,104 @@ button:disabled {
   display: flex;
   gap: 0.4rem;
 }
+
+/* ── E8 Meta-juego ──────────────────────────────────────────── */
+
+.meta-base-banner {
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin: 0 1.25rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.meta-base-banner p {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+.meta-base--radiant {
+  background: linear-gradient(135deg, #d8f3dc, #b7e4c7);
+  color: #1b4332;
+}
+
+.meta-base--stable {
+  background: #eef6f0;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.meta-base--attention {
+  background: #fff8e6;
+  color: #7c5e10;
+  border: 1px solid #f4d03f;
+}
+
+.meta-base--recovery {
+  background: #1a1a1a;
+  color: #f8faf8;
+  border: 1px solid #e63946;
+}
+
+.meta-daily-banner {
+  margin: 0 1.25rem 0.75rem;
+  padding: 0.65rem 1rem;
+  background: var(--surface);
+  border: 1px dashed var(--brand-light);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.meta-daily-progress {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.meta-boss-banner {
+  margin: 0 1.25rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #2d1f1f;
+  color: #ffe8e8;
+  border-radius: 12px;
+  border-left: 4px solid var(--error);
+  font-size: 0.85rem;
+}
+
+.event-banner--random {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #4c1d95;
+}
+
+.badge-boss {
+  background: #2d1f1f;
+  color: #ffb4b4;
+}
+
+.meta-recovery-panel,
+.meta-boss-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.meta-boss-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+
+.map-stat-card--living.meta-base--recovery {
+  background: #1a1a1a;
+  color: #f8faf8;
+}
+
+.map-stat-card--living.meta-base--radiant {
+  background: linear-gradient(145deg, #d8f3dc, #95d5b2);
+}

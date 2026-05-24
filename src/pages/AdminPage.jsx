@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi, templatesApi } from "../api/homeops.js";
+import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi, templatesApi, metaApi } from "../api/homeops.js";
 
 const TABS = [
   { id: "family", label: "Familia", step: 1 },
@@ -141,12 +141,13 @@ export default function AdminPage() {
     mvpEnabled: false,
     rankingEnabled: false,
   });
+  const [metaSettings, setMetaSettings] = useState({ randomEventsEnabled: true });
   const [templates, setTemplates] = useState([]);
   const [templateForm, setTemplateForm] = useState(EMPTY_TEMPLATE_FORM);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
 
   const load = useCallback(async () => {
-    const [m, z, t, r, metrics, balance, ev, social, tpl] = await Promise.all([
+    const [m, z, t, r, metrics, balance, ev, social, tpl, meta] = await Promise.all([
       membersApi.list(),
       zonesApi.list(),
       tasksApi.list(),
@@ -156,6 +157,7 @@ export default function AdminPage() {
       eventsApi.list().catch(() => []),
       socialApi.settings().catch(() => ({ mvpEnabled: false, rankingEnabled: false })),
       templatesApi.list().catch(() => []),
+      metaApi.dashboard().catch(() => null),
     ]);
     setMembers(m);
     setZones(z);
@@ -166,6 +168,7 @@ export default function AdminPage() {
     setEvents(ev);
     setSocialSettings(social);
     setTemplates(tpl);
+    if (meta?.settings) setMetaSettings(meta.settings);
     if (z.length) {
       setTaskForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
       setTemplateForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
@@ -437,6 +440,16 @@ export default function AdminPage() {
     }
   }
 
+  async function saveMetaSettings() {
+    try {
+      const data = await metaApi.updateSettings(metaSettings);
+      setMetaSettings(data.settings);
+      flash("Configuración meta-juego guardada");
+    } catch (err) {
+      flash(err.message || "No se pudo guardar");
+    }
+  }
+
   async function saveSocialSettings() {
     try {
       const data = await socialApi.updateSettings(socialSettings);
@@ -576,6 +589,26 @@ export default function AdminPage() {
             </label>
             <button type="button" className="btn-secondary" onClick={saveSocialSettings}>
               Guardar configuración social
+            </button>
+          </section>
+
+          <section className="admin-social-settings">
+            <h3>Meta-juego (E8)</h3>
+            <p className="panel-desc">
+              Eventos aleatorios ocasionales (+15% monedas, ventana de 4 h). Máx. 2 eventos bonus apilados.
+            </p>
+            <label className="admin-checkbox">
+              <input
+                type="checkbox"
+                checked={metaSettings.randomEventsEnabled}
+                onChange={(e) =>
+                  setMetaSettings((s) => ({ ...s, randomEventsEnabled: e.target.checked }))
+                }
+              />
+              Permitir eventos aleatorios
+            </label>
+            <button type="button" className="btn-secondary" onClick={saveMetaSettings}>
+              Guardar meta-juego
             </button>
           </section>
 
