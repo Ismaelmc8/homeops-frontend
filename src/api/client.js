@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "../config/env.js";
+import { getToken } from "./authStorage.js";
 
 /** Error HTTP o de red con contexto para la UI o logs. */
 export class ApiError extends Error {
@@ -27,7 +28,7 @@ export async function apiFetch(path, options = {}) {
   const pathname = path.startsWith("/") ? path : `/${path}`;
   const url = `${base}${pathname}`;
 
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: userSignal, headers, ...rest } =
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: userSignal, headers, auth = false, ...rest } =
     options;
 
   const timeoutController = new AbortController();
@@ -43,11 +44,17 @@ export async function apiFetch(path, options = {}) {
       : userSignal ?? (timeoutMs > 0 ? timeoutController.signal : undefined);
 
   try {
+    const hdrs = headers instanceof Headers ? headers : new Headers(headers);
+    if (auth) {
+      const token = getToken();
+      if (token) hdrs.set("Authorization", `Bearer ${token}`);
+    }
+
     const res = await fetch(url, {
       method: rest.method ?? "GET",
       ...rest,
       signal,
-      headers: headers instanceof Headers ? headers : new Headers(headers),
+      headers: hdrs,
     });
 
     const text = await res.text();

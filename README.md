@@ -1,16 +1,87 @@
-# React + Vite
+# HomeOps RPG — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Cliente **React + Vite** que consume la API del backend.
 
-Currently, two official plugins are available:
+Repositorio: [homeops-frontend](https://github.com/Ismaelmc8/homeops-frontend)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js LTS (v20+)
+- Backend en marcha (ver `../back-end/README.md`)
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Configuración
+
+1. Instalar dependencias:
+
+```powershell
+npm install
+```
+
+2. Variables de entorno:
+
+```powershell
+copy .env.example .env
+```
+
+Por defecto:
+
+```env
+VITE_API_URL=http://localhost:4000
+```
+
+Debe coincidir con el puerto del API y con `CORS_ORIGIN` del backend.
+
+---
+
+## Arrancar
+
+**Solo front-end:**
+
+```powershell
+npm run dev
+```
+
+App en `http://localhost:5173` (puerto habitual de Vite).
+
+La pantalla inicial comprueba `GET /api/health` y muestra el estado del API.
+
+---
+
+## Desde la carpeta raíz del monorepo local
+
+En `Tareas del hogar/`:
+
+```powershell
+npm install
+npm run dev
+```
+
+Levanta backend y front-end a la vez (`concurrently`).
+
+---
+
+## Scripts
+
+| Comando | Uso |
+|---------|-----|
+| `npm run dev` | Desarrollo con HMR |
+| `npm run build` | Build producción |
+| `npm run preview` | Previsualizar build |
+| `npm run lint` | ESLint |
+
+---
+
+## Estructura relevante
+
+```text
+src/
+  api/client.js    cliente HTTP (apiFetch, getHealth)
+  config/env.js    VITE_API_URL
+  App.jsx          shell temporal (health check en E0)
+```
+
+Documentación: `../docs/HOMEOPS-RPG-PLAN-TECNICO.md`, fase [E0](../docs/evolutivos/E0-fundamentos.md).
