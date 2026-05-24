@@ -243,6 +243,17 @@
   text-decoration: underline;
 }
 
+.auth-link-small {
+  font-size: 0.8rem;
+  color: #2d6a4f;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-link-small:hover {
+  text-decoration: underline;
+}
+
 /* ── Password strength bar ── */
 .auth-strength {
   display: flex;

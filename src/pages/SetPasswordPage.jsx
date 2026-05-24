@@ -38,6 +38,7 @@ function InvalidLink() {
 export default function SetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get("token") || "";
+  const isReset = params.get("mode") === "reset";
   const navigate = useNavigate();
   const { activate } = useAuth();
 
@@ -110,15 +111,23 @@ export default function SetPasswordPage() {
 
       <div>
         <h1 className="auth-card-title">
-          {tokenInfo?.needsName ? "Únete al hogar" : "Crea tu contraseña"}
+          {isReset || tokenInfo?.purpose === "reset"
+            ? "Nueva contraseña"
+            : tokenInfo?.needsName
+              ? "Únete al hogar"
+              : "Crea tu contraseña"}
         </h1>
         <p className="auth-card-subtitle" style={{ marginTop: "0.35rem" }}>
-          {tokenInfo?.homeName
-            ? `Te unes al hogar «${tokenInfo.homeName}». `
-            : ""}
-          {tokenInfo?.needsName
-            ? "Elige cómo quieres que te llamen y crea tu contraseña."
-            : "Mínimo 8 caracteres. Cuanto más variada, mejor."}
+          {isReset || tokenInfo?.purpose === "reset"
+            ? "Elige una contraseña nueva para tu cuenta."
+            : (
+              <>
+                {tokenInfo?.homeName ? `Te unes al hogar «${tokenInfo.homeName}». ` : ""}
+                {tokenInfo?.needsName
+                  ? "Elige cómo quieres que te llamen y crea tu contraseña."
+                  : "Mínimo 8 caracteres. Cuanto más variada, mejor."}
+              </>
+            )}
         </p>
       </div>
 
@@ -183,7 +192,13 @@ export default function SetPasswordPage() {
             (tokenInfo?.needsName && !displayName.trim())
           }
         >
-          {loading ? <><Spinner /> Activando…</> : "Activar cuenta"}
+          {loading ? (
+            <><Spinner /> Guardando…</>
+          ) : isReset || tokenInfo?.purpose === "reset" ? (
+            "Guardar contraseña"
+          ) : (
+            "Activar cuenta"
+          )}
         </button>
       </form>
     </AuthShell>

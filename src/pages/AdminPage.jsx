@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { zonesApi, tasksApi, rewardsApi, membersApi } from "../api/homeops.js";
+import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi } from "../api/homeops.js";
 
 const TABS = [
   { id: "family", label: "Familia", step: 1 },
   { id: "zones", label: "Zonas", step: 2 },
   { id: "tasks", label: "Tareas", step: 3 },
-  { id: "rewards", label: "Recompensas", step: 4 },
+  { id: "events", label: "Eventos", step: 4 },
+  { id: "rewards", label: "Recompensas", step: 5 },
 ];
 
 const MEMBER_STATUS = {
@@ -89,6 +90,13 @@ const EMPTY_TASK_FORM   = {
   name: "", zoneId: "", taskType: "recurrent_light",
   difficulty: 2, durationMin: 15,
   frequencyIdealDays: 2, frequencyToleranceDays: 1, frequencyCriticalDays: 3,
+  isCooperative: false,
+  assigneeIds: [],
+};
+const EMPTY_EVENT_FORM = {
+  eventType: "speedrun",
+  startsAt: "",
+  endsAt: "",
 };
 const EMPTY_REWARD_FORM = { name: "", costCoins: 50 };
 const EMPTY_INVITE_FORM = { email: "" };
@@ -112,18 +120,34 @@ export default function AdminPage() {
   const [editingRewardId, setEditingRewardId] = useState(null);
 
   const [inviteForm, setInviteForm] = useState(EMPTY_INVITE_FORM);
+  const [adminMetrics, setAdminMetrics] = useState(null);
+  const [balanceMetrics, setBalanceMetrics] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [eventForm, setEventForm] = useState(EMPTY_EVENT_FORM);
+  const [socialSettings, setSocialSettings] = useState({
+    mvpEnabled: false,
+    rankingEnabled: false,
+  });
 
   const load = useCallback(async () => {
-    const [m, z, t, r] = await Promise.all([
+    const [m, z, t, r, metrics, balance, ev, social] = await Promise.all([
       membersApi.list(),
       zonesApi.list(),
       tasksApi.list(),
       rewardsApi.list(),
+      metricsApi.admin().catch(() => null),
+      metricsApi.balance().catch(() => null),
+      eventsApi.list().catch(() => []),
+      socialApi.settings().catch(() => ({ mvpEnabled: false, rankingEnabled: false })),
     ]);
     setMembers(m);
     setZones(z);
     setTasks(t);
     setRewards(r);
+    setAdminMetrics(metrics);
+    setBalanceMetrics(balance);
+    setEvents(ev);
+    setSocialSettings(social);
     if (z.length) {
       setTaskForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
     }
@@ -192,7 +216,10 @@ export default function AdminPage() {
   /* ── Tareas ── */
   function cancelTaskEdit() {
     setEditingTaskId(null);
-    setTaskForm((f) => ({ ...EMPTY_TASK_FORM, zoneId: f.zoneId }));
+    setTaskForm((f) => ({
+      ...EMPTY_TASK_FORM,
+      zoneId: f.zoneId || String(zones[0]?.id ?? ""),
+    }));
   }
 
   function startTaskEdit(t) {
@@ -206,26 +233,69 @@ export default function AdminPage() {
       frequencyIdealDays: t.frequency_ideal_days,
       frequencyToleranceDays: t.frequency_tolerance_days,
       frequencyCriticalDays: t.frequency_critical_days,
+      isCooperative: !!t.is_cooperative,
+      assigneeIds: (t.assignees ?? []).map((a) => a.userId),
     });
     setTab("tasks");
+  }
+
+  function toggleAssignee(userId) {
+    setTaskForm((f) => {
+      const ids = f.assigneeIds.includes(userId)
+        ? f.assigneeIds.filter((id) => id !== userId)
+        : [...f.assigneeIds, userId];
+      return { ...f, assigneeIds: ids };
+    });
   }
 
   async function saveTask(e) {
     e.preventDefault();
     if (!zones.length) { flash("Crea al menos una zona primero."); setTab("zones"); return; }
+    const payload = {
+      ...taskForm,
+      zoneId: Number(taskForm.zoneId),
+      assigneeIds: taskForm.assigneeIds,
+    };
     try {
       if (editingTaskId) {
-        await tasksApi.update(editingTaskId, { ...taskForm, zoneId: Number(taskForm.zoneId) });
+        await tasksApi.update(editingTaskId, payload);
         cancelTaskEdit();
         flash("Tarea actualizada");
       } else {
-        await tasksApi.create({ ...taskForm, zoneId: Number(taskForm.zoneId) });
-        setTaskForm((f) => ({ ...f, name: "" }));
+        await tasksApi.create(payload);
+        setTaskForm((f) => ({ ...f, name: "", assigneeIds: [] }));
         flash("Tarea creada");
       }
       load();
     } catch (err) {
       flash(err.message || "No se pudo guardar la tarea");
+    }
+  }
+
+  async function createEvent(e) {
+    e.preventDefault();
+    try {
+      await eventsApi.create({
+        eventType: eventForm.eventType,
+        startsAt: new Date(eventForm.startsAt).toISOString(),
+        endsAt: new Date(eventForm.endsAt).toISOString(),
+      });
+      setEventForm(EMPTY_EVENT_FORM);
+      flash("Evento programado");
+      load();
+    } catch (err) {
+      flash(err.message || "No se pudo crear el evento");
+    }
+  }
+
+  async function deleteEvent(ev) {
+    if (!window.confirm("¿Eliminar este evento?")) return;
+    try {
+      await eventsApi.remove(ev.id);
+      flash("Evento eliminado");
+      load();
+    } catch (err) {
+      flash(err.message || "No se pudo eliminar");
     }
   }
 
@@ -297,6 +367,16 @@ export default function AdminPage() {
     }
   }
 
+  async function saveSocialSettings() {
+    try {
+      const data = await socialApi.updateSettings(socialSettings);
+      setSocialSettings(data);
+      flash("Configuración social guardada");
+    } catch (err) {
+      flash(err.message || "No se pudo guardar");
+    }
+  }
+
   async function resendInvite(member) {
     setInviteDevLink("");
     try {
@@ -325,6 +405,56 @@ export default function AdminPage() {
         </p>
       )}
 
+      {balanceMetrics && (
+        <section className="admin-balance" aria-label="Reparto semanal">
+          <h3 className="admin-balance-title">Reparto (7 días)</h3>
+          {balanceMetrics.imbalanceMessage && (
+            <p className="admin-balance-warn">{balanceMetrics.imbalanceMessage}</p>
+          )}
+          <ul className="admin-balance-list">
+            {balanceMetrics.members.map((m) => (
+              <li key={m.userId}>
+                <span>{m.name}</span>
+                <span>{m.sharePercent}% · fiabilidad {m.reliabilityPercent}%</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {adminMetrics && (
+        <section className="admin-metrics" aria-label="Métricas del hogar (7 días)">
+          <div className="admin-metric-card">
+            <strong>{adminMetrics.preventivePercent}%</strong>
+            <span>Preventivo</span>
+          </div>
+          <div className="admin-metric-card">
+            <strong>{adminMetrics.stabilityPercent}%</strong>
+            <span>Estabilidad zonas</span>
+          </div>
+          <div className="admin-metric-card">
+            <strong>{adminMetrics.completionsInPeriod}</strong>
+            <span>Completadas</span>
+          </div>
+          <div className="admin-metric-card">
+            <strong>{adminMetrics.contributorCount}</strong>
+            <span>Contribuyentes</span>
+          </div>
+          {adminMetrics.avgDurationMin != null && (
+            <div className="admin-metric-card">
+              <strong>{adminMetrics.avgDurationMin} min</strong>
+              <span>Tiempo medio</span>
+            </div>
+          )}
+          {adminMetrics.activeStreaksHome > 0 && (
+            <div className="admin-metric-card">
+              <strong>{adminMetrics.activeStreaksHome}</strong>
+              <span>Rachas activas</span>
+            </div>
+          )}
+        </section>
+      )}
+
       <nav className="admin-tabs" aria-label="Secciones de administración">
         {TABS.map((t) => (
           <button
@@ -348,6 +478,36 @@ export default function AdminPage() {
             cuenta, creará su contraseña y entrará como <strong>miembro</strong> (puede completar
             tareas y ganar monedas, pero no administrar la casa).
           </p>
+
+          <section className="admin-social-settings">
+            <h3>Funciones sociales (opt-in)</h3>
+            <p className="panel-desc">
+              Por defecto desactivadas. Sin rankings punitivos: el MVP premia equilibrio, no volumen.
+            </p>
+            <label className="admin-checkbox">
+              <input
+                type="checkbox"
+                checked={socialSettings.mvpEnabled}
+                onChange={(e) =>
+                  setSocialSettings((s) => ({ ...s, mvpEnabled: e.target.checked }))
+                }
+              />
+              MVP semanal visible en la home
+            </label>
+            <label className="admin-checkbox">
+              <input
+                type="checkbox"
+                checked={socialSettings.rankingEnabled}
+                onChange={(e) =>
+                  setSocialSettings((s) => ({ ...s, rankingEnabled: e.target.checked }))
+                }
+              />
+              Ranking amistoso (progreso del objetivo común)
+            </label>
+            <button type="button" className="btn-secondary" onClick={saveSocialSettings}>
+              Guardar configuración social
+            </button>
+          </section>
 
           <form onSubmit={inviteMember} className="admin-form">
             <Field
@@ -679,6 +839,41 @@ export default function AdminPage() {
               </div>
             </fieldset>
 
+            <label className="admin-checkbox">
+              <input
+                type="checkbox"
+                checked={taskForm.isCooperative}
+                onChange={(e) =>
+                  setTaskForm({ ...taskForm, isCooperative: e.target.checked })
+                }
+                disabled={!zones.length}
+              />
+              Tarea cooperativa (+15% si 2+ miembros la completan en 48 h)
+            </label>
+
+            {members.filter((m) => m.status === "active").length > 0 && (
+              <Field
+                id="task-assignees"
+                label="Asignar a (opcional)"
+                hint="Vacío = cualquiera puede hacerla. Solo miembros activos."
+              >
+                <div className="assignee-chips">
+                  {members
+                    .filter((m) => m.status === "active")
+                    .map((m) => (
+                      <label key={m.id} className="assignee-chip">
+                        <input
+                          type="checkbox"
+                          checked={taskForm.assigneeIds.includes(m.id)}
+                          onChange={() => toggleAssignee(m.id)}
+                        />
+                        {m.name || m.email}
+                      </label>
+                    ))}
+                </div>
+              </Field>
+            )}
+
             <div className="form-actions">
               <button type="submit" disabled={!zones.length}>
                 {editingTaskId ? "Guardar cambios" : "Añadir tarea"}
@@ -700,6 +895,10 @@ export default function AdminPage() {
                   <span className="item-meta">
                     {t.zone_name} · {TASK_TYPES.find((x) => x.value === t.task_type)?.label ?? t.task_type}
                     {" · "}dificultad {t.difficulty} · {t.duration_min} min · cada {t.frequency_ideal_days} d
+                    {t.is_cooperative ? " · cooperativa" : ""}
+                    {(t.assignees?.length ?? 0) > 0
+                      ? ` · ${t.assignees.map((a) => a.name).join(", ")}`
+                      : ""}
                   </span>
                 </div>
                 <div className="item-actions">
@@ -710,6 +909,70 @@ export default function AdminPage() {
                     Borrar
                   </button>
                 </div>
+              </li>
+            ))}
+          </ItemList>
+        </section>
+      )}
+
+      {tab === "events" && (
+        <section className="admin-panel" aria-labelledby="events-heading">
+          <h2 id="events-heading">Eventos temporales</h2>
+          <p className="panel-desc">
+            Solo un evento activo a la vez. <strong>Speedrun</strong>: +50% monedas en tareas ≤15 min.
+            <strong> Día perfecto</strong>: bonus si todas las zonas quedan en verde.
+          </p>
+
+          <form onSubmit={createEvent} className="admin-form">
+            <Field id="event-type" label="Tipo">
+              <select
+                id="event-type"
+                value={eventForm.eventType}
+                onChange={(e) => setEventForm({ ...eventForm, eventType: e.target.value })}
+              >
+                <option value="speedrun">Speedrun</option>
+                <option value="perfect_day">Día perfecto</option>
+              </select>
+            </Field>
+            <div className="field-row">
+              <Field id="event-start" label="Inicio">
+                <input
+                  id="event-start"
+                  type="datetime-local"
+                  value={eventForm.startsAt}
+                  onChange={(e) => setEventForm({ ...eventForm, startsAt: e.target.value })}
+                  required
+                />
+              </Field>
+              <Field id="event-end" label="Fin">
+                <input
+                  id="event-end"
+                  type="datetime-local"
+                  value={eventForm.endsAt}
+                  onChange={(e) => setEventForm({ ...eventForm, endsAt: e.target.value })}
+                  required
+                />
+              </Field>
+            </div>
+            <button type="submit">Activar evento</button>
+          </form>
+
+          <h3>Eventos</h3>
+          <ItemList empty={!events.length}>
+            {events.map((ev) => (
+              <li key={ev.id}>
+                <div className="admin-list-item-main">
+                  <strong>
+                    {ev.eventType === "speedrun" ? "Speedrun" : "Día perfecto"}
+                    {ev.isActive ? " (activo)" : ""}
+                  </strong>
+                  <span className="item-meta">
+                    {new Date(ev.startsAt).toLocaleString()} — {new Date(ev.endsAt).toLocaleString()}
+                  </span>
+                </div>
+                <button type="button" className="btn-danger" onClick={() => deleteEvent(ev)}>
+                  Borrar
+                </button>
               </li>
             ))}
           </ItemList>

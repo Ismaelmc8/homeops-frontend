@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { socialApi } from "../api/homeops.js";
 
 function Avatar({ name }) {
   const initials = name
@@ -20,6 +22,13 @@ function InfoRow({ label, value }) {
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mvp, setMvp] = useState(null);
+  const [microGoal, setMicroGoal] = useState(null);
+
+  useEffect(() => {
+    socialApi.mvp().then(setMvp).catch(() => {});
+    socialApi.microGoals().then(setMicroGoal).catch(() => {});
+  }, []);
 
   function handleLogout() {
     logout();
@@ -41,6 +50,25 @@ export default function ProfilePage() {
           <span className={roleBadgeClass}>{roleLabel}</span>
         </div>
       </section>
+
+      {mvp?.enabled && mvp.mvp && (
+        <section className="profile-mvp">
+          <p>
+            ⭐ MVP del hogar esta semana: <strong>{mvp.mvp.name}</strong>
+          </p>
+          <p className="profile-mvp-hint">{mvp.mvp.label}</p>
+        </section>
+      )}
+
+      {microGoal && (
+        <section className="profile-details">
+          <h2 className="section-title">Microobjetivo de hoy</h2>
+          <p>
+            {microGoal.label}: {microGoal.progress}/{microGoal.target}
+            {microGoal.met ? " ✓" : ""}
+          </p>
+        </section>
+      )}
 
       {/* Details */}
       <section className="profile-details">

@@ -10,11 +10,29 @@ export const authApi = {
   login: (body) =>
     apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
   me: () => apiFetch("/api/auth/me", { auth: true }),
+  forgotPassword: (body) =>
+    apiFetch("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
 };
 
 export const tasksApi = {
-  kanban: () => apiFetch("/api/tasks/kanban", { auth: true }),
-  complete: (id) => apiFetch(`/api/tasks/${id}/complete`, { method: "POST", auth: true }),
+  kanban: ({ microOnly = false, assignedToMe = false } = {}) => {
+    const q = new URLSearchParams();
+    if (microOnly) q.set("microOnly", "1");
+    if (assignedToMe) q.set("assignedToMe", "1");
+    const qs = q.toString();
+    return apiFetch(`/api/tasks/kanban${qs ? `?${qs}` : ""}`, { auth: true });
+  },
+  complete: (id, body = {}) =>
+    apiFetch(`/api/tasks/${id}/complete`, {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
   list: () => apiFetch("/api/tasks", { auth: true }),
   create: (body) =>
     apiFetch("/api/tasks", { method: "POST", auth: true, body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
@@ -63,6 +81,56 @@ export const membersApi = {
 
 export const metricsApi = {
   summary: () => apiFetch("/api/metrics/summary", { auth: true }),
+  admin: () => apiFetch("/api/metrics/admin", { auth: true }),
+  balance: () => apiFetch("/api/metrics/balance", { auth: true }),
+};
+
+export const eventsApi = {
+  active: () => apiFetch("/api/events/active", { auth: true }),
+  list: () => apiFetch("/api/events", { auth: true }),
+  create: (body) =>
+    apiFetch("/api/events", {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  remove: (id) => apiFetch(`/api/events/${id}`, { method: "DELETE", auth: true }),
+};
+
+export const goalsApi = {
+  weekly: () => apiFetch("/api/goals/weekly", { auth: true }),
+  claim: () => apiFetch("/api/goals/weekly/claim", { method: "POST", auth: true }),
+};
+
+export const socialApi = {
+  catalog: () => apiFetch("/api/social/catalog"),
+  settings: () => apiFetch("/api/social/settings", { auth: true }),
+  updateSettings: (body) =>
+    apiFetch("/api/social/settings", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  timeline: ({ userId, zoneId, days } = {}) => {
+    const q = new URLSearchParams();
+    if (userId) q.set("userId", userId);
+    if (zoneId) q.set("zoneId", zoneId);
+    if (days) q.set("days", days);
+    const qs = q.toString();
+    return apiFetch(`/api/social/timeline${qs ? `?${qs}` : ""}`, { auth: true });
+  },
+  kudos: (body) =>
+    apiFetch("/api/social/kudos", {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  mvp: () => apiFetch("/api/social/mvp", { auth: true }),
+  ranking: () => apiFetch("/api/social/ranking", { auth: true }),
+  microGoals: () => apiFetch("/api/social/micro-goals", { auth: true }),
 };
 
 export { getToken, setToken } from "./authStorage.js";

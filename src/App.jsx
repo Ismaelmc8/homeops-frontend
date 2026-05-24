@@ -5,10 +5,12 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import CheckEmailPage from "./pages/CheckEmailPage.jsx";
 import SetPasswordPage from "./pages/SetPasswordPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import WalletPage from "./pages/WalletPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
+import TimelinePage from "./pages/TimelinePage.jsx";
 import "./App.css";
 
 function PrivateRoute({ adminOnly = false }) {
@@ -28,12 +30,14 @@ export default function App() {
         <Route path="/registro"              element={<RegisterPage />} />
         <Route path="/revisa-correo"         element={<CheckEmailPage />} />
         <Route path="/establecer-contrasena" element={<SetPasswordPage />} />
+        <Route path="/olvide-contrasena" element={<ForgotPasswordPage />} />
 
         {/* App — con navbar */}
         <Route element={<Layout />}>
           <Route element={<PrivateRoute />}>
             <Route index          element={<HomePage />} />
             <Route path="recompensas" element={<WalletPage />} />
+            <Route path="historial" element={<TimelinePage />} />
             <Route path="perfil"      element={<ProfilePage />} />
           </Route>
           <Route element={<PrivateRoute adminOnly />}>

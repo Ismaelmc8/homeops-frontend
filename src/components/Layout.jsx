@@ -22,6 +22,15 @@ function IconGift() {
   );
 }
 
+function IconHistory() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
 function IconPerson() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -87,6 +96,7 @@ export default function Layout() {
       <nav className="bottom-nav" aria-label="Navegación principal">
         <NavItem to="/" icon={<IconHome />} label="Inicio" end />
         <NavItem to="/recompensas" icon={<IconGift />} label="Premios" />
+        <NavItem to="/historial" icon={<IconHistory />} label="Historial" />
         <NavItem to="/perfil" icon={<IconPerson />} label="Perfil" />
         {user?.role === "admin" && (
           <NavItem to="/admin" icon={<IconSettings />} label="Admin" />
