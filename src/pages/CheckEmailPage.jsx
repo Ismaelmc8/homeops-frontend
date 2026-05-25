@@ -1,9 +1,28 @@
+import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { authApi } from "../api/homeops.js";
 import AuthShell, { EnvelopeIcon } from "../components/AuthShell.jsx";
 
 export default function CheckEmailPage() {
   const { state } = useLocation();
   const devLink = state?.devLink;
+  const email = state?.email ?? "";
+  const [resendMsg, setResendMsg] = useState("");
+  const [resending, setResending] = useState(false);
+
+  async function handleResend() {
+    if (!email) return;
+    setResending(true);
+    try {
+      const res = await authApi.resendActivation({ email });
+      setResendMsg(res.message);
+      if (res.devLink) window.location.href = res.devLink;
+    } catch (e) {
+      setResendMsg(e.message);
+    } finally {
+      setResending(false);
+    }
+  }
 
   return (
     <AuthShell tagline="Casi listo, un paso más.">
@@ -32,6 +51,15 @@ export default function CheckEmailPage() {
           <strong>🔧 Enlace de desarrollo</strong>
           <a href={devLink}>{devLink}</a>
         </div>
+      )}
+
+      {email && (
+        <p className="auth-footer">
+          <button type="button" className="btn-link" onClick={handleResend} disabled={resending}>
+            {resending ? "Enviando…" : "Reenviar enlace de activación"}
+          </button>
+          {resendMsg && <span className="field-hint" style={{ display: "block" }}>{resendMsg}</span>}
+        </p>
       )}
 
       <p className="auth-footer" style={{ marginTop: "0" }}>

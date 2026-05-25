@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi, templatesApi, metaApi } from "../api/homeops.js";
+import { zonesApi, tasksApi, rewardsApi, membersApi, metricsApi, eventsApi, socialApi, templatesApi, metaApi, smartApi, goalsApi } from "../api/homeops.js";
 
 const TABS = [
   { id: "family", label: "Familia", step: 1 },
@@ -142,12 +142,32 @@ export default function AdminPage() {
     rankingEnabled: false,
   });
   const [metaSettings, setMetaSettings] = useState({ randomEventsEnabled: true });
+  const [smartSettings, setSmartSettings] = useState({
+    silenceMode: false,
+    notificationsEnabled: true,
+    predictionsEnabled: true,
+    nextTaskEnabled: true,
+    autoPriorityEnabled: true,
+    optimalHoursEnabled: true,
+    burnoutGuardEnabled: true,
+    assigneeSuggestionsEnabled: true,
+    quietHoursStart: 22,
+    quietHoursEnd: 8,
+    dailyNotificationCap: 3,
+  });
+  const [smartAutomations, setSmartAutomations] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [templateForm, setTemplateForm] = useState(EMPTY_TEMPLATE_FORM);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [weeklyGoalForm, setWeeklyGoalForm] = useState({
+    goalType: "completions_count",
+    targetValue: 10,
+    rewardCoins: 50,
+    customLabel: "",
+  });
 
   const load = useCallback(async () => {
-    const [m, z, t, r, metrics, balance, ev, social, tpl, meta] = await Promise.all([
+    const [m, z, t, r, metrics, balance, ev, social, tpl, meta, smart, weekly] = await Promise.all([
       membersApi.list(),
       zonesApi.list(),
       tasksApi.list(),
@@ -158,6 +178,8 @@ export default function AdminPage() {
       socialApi.settings().catch(() => ({ mvpEnabled: false, rankingEnabled: false })),
       templatesApi.list().catch(() => []),
       metaApi.dashboard().catch(() => null),
+      smartApi.settings().catch(() => null),
+      goalsApi.weekly().catch(() => null),
     ]);
     setMembers(m);
     setZones(z);
@@ -169,6 +191,18 @@ export default function AdminPage() {
     setSocialSettings(social);
     setTemplates(tpl);
     if (meta?.settings) setMetaSettings(meta.settings);
+    if (smart?.settings) {
+      setSmartSettings(smart.settings);
+      setSmartAutomations(smart.automationsCatalog ?? []);
+    }
+    if (weekly) {
+      setWeeklyGoalForm({
+        goalType: weekly.goalType,
+        targetValue: weekly.targetValue,
+        rewardCoins: weekly.rewardCoins,
+        customLabel: weekly.customLabel ?? "",
+      });
+    }
     if (z.length) {
       setTaskForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
       setTemplateForm((f) => (f.zoneId ? f : { ...f, zoneId: String(z[0].id) }));
@@ -450,6 +484,27 @@ export default function AdminPage() {
     }
   }
 
+  async function saveWeeklyGoal() {
+    try {
+      await goalsApi.updateWeekly(weeklyGoalForm);
+      flash("Objetivo semanal del hogar actualizado");
+      load();
+    } catch (err) {
+      flash(err.message || "No se pudo guardar");
+    }
+  }
+
+  async function saveSmartSettings() {
+    try {
+      const data = await smartApi.updateSettings(smartSettings);
+      setSmartSettings(data.settings);
+      setSmartAutomations(data.automationsCatalog ?? smartAutomations);
+      flash("Configuración smart guardada");
+    } catch (err) {
+      flash(err.message || "No se pudo guardar");
+    }
+  }
+
   async function saveSocialSettings() {
     try {
       const data = await socialApi.updateSettings(socialSettings);
@@ -589,6 +644,78 @@ export default function AdminPage() {
             </label>
             <button type="button" className="btn-secondary" onClick={saveSocialSettings}>
               Guardar configuración social
+            </button>
+          </section>
+
+          <section className="admin-social-settings">
+            <h3>Smart / adaptación (E9)</h3>
+            <p className="panel-desc">
+              Motor de reglas sobre el historial del hogar. Cada automatismo se puede desactivar. Modo silencio = cero notificaciones.
+            </p>
+            {(smartAutomations.length ? smartAutomations : [
+              { key: "notificationsEnabled", label: "Notificaciones inteligentes" },
+              { key: "predictionsEnabled", label: "Predicción de suciedad" },
+              { key: "nextTaskEnabled", label: "Siguiente mejor tarea" },
+              { key: "autoPriorityEnabled", label: "Prioridad automática (Kanban)" },
+              { key: "optimalHoursEnabled", label: "Horarios óptimos" },
+              { key: "burnoutGuardEnabled", label: "Guardia anti-burnout" },
+              { key: "assigneeSuggestionsEnabled", label: "Sugerencia de reparto" },
+              { key: "silenceMode", label: "Modo silencio (0 notificaciones)" },
+            ]).map((a) => (
+              <label key={a.key} className="admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={!!smartSettings[a.key]}
+                  onChange={(e) =>
+                    setSmartSettings((s) => ({ ...s, [a.key]: e.target.checked }))
+                  }
+                />
+                {a.label}
+              </label>
+            ))}
+            <div className="field-row" style={{ marginTop: "0.75rem" }}>
+              <Field id="quiet-start" label="Silencio desde (hora)">
+                <input
+                  id="quiet-start"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={smartSettings.quietHoursStart}
+                  onChange={(e) =>
+                    setSmartSettings((s) => ({ ...s, quietHoursStart: Number(e.target.value) }))
+                  }
+                />
+              </Field>
+              <Field id="quiet-end" label="Hasta (hora)">
+                <input
+                  id="quiet-end"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={smartSettings.quietHoursEnd}
+                  onChange={(e) =>
+                    setSmartSettings((s) => ({ ...s, quietHoursEnd: Number(e.target.value) }))
+                  }
+                />
+              </Field>
+              <Field id="notif-cap" label="Tope notif./día">
+                <input
+                  id="notif-cap"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={smartSettings.dailyNotificationCap}
+                  onChange={(e) =>
+                    setSmartSettings((s) => ({
+                      ...s,
+                      dailyNotificationCap: Number(e.target.value),
+                    }))
+                  }
+                />
+              </Field>
+            </div>
+            <button type="button" className="btn-secondary" onClick={saveSmartSettings}>
+              Guardar smart
             </button>
           </section>
 
@@ -1088,14 +1215,68 @@ export default function AdminPage() {
           </p>
 
           <form onSubmit={createEvent} className="admin-form">
+            <section className="admin-social-settings" style={{ marginBottom: "1.5rem" }}>
+              <h3>Objetivo semanal (acordado)</h3>
+              <Field id="wg-type" label="Tipo">
+                <select
+                  id="wg-type"
+                  value={weeklyGoalForm.goalType}
+                  onChange={(e) => setWeeklyGoalForm((f) => ({ ...f, goalType: e.target.value }))}
+                >
+                  <option value="completions_count">Completadas en la semana</option>
+                  <option value="zero_critical_zones">0 zonas en crítico</option>
+                  <option value="coop_completions_count">Tareas cooperativas</option>
+                  <option value="micro_completions_count">Microtareas</option>
+                </select>
+              </Field>
+              <div className="field-row">
+                <Field id="wg-target" label="Meta">
+                  <input
+                    id="wg-target"
+                    type="number"
+                    min={1}
+                    value={weeklyGoalForm.targetValue}
+                    onChange={(e) =>
+                      setWeeklyGoalForm((f) => ({ ...f, targetValue: Number(e.target.value) }))
+                    }
+                  />
+                </Field>
+                <Field id="wg-reward" label="Cofre (monedas)">
+                  <input
+                    id="wg-reward"
+                    type="number"
+                    min={10}
+                    value={weeklyGoalForm.rewardCoins}
+                    onChange={(e) =>
+                      setWeeklyGoalForm((f) => ({ ...f, rewardCoins: Number(e.target.value) }))
+                    }
+                  />
+                </Field>
+              </div>
+              <Field id="wg-label" label="Etiqueta visible (opcional)">
+                <input
+                  id="wg-label"
+                  value={weeklyGoalForm.customLabel}
+                  onChange={(e) => setWeeklyGoalForm((f) => ({ ...f, customLabel: e.target.value }))}
+                  placeholder="Ej: Semana del orden"
+                />
+              </Field>
+              <button type="button" className="btn-secondary" onClick={saveWeeklyGoal}>
+                Guardar objetivo semanal
+              </button>
+            </section>
+
             <Field id="event-type" label="Tipo">
               <select
                 id="event-type"
                 value={eventForm.eventType}
                 onChange={(e) => setEventForm({ ...eventForm, eventType: e.target.value })}
               >
-                <option value="speedrun">Speedrun</option>
+                <option value="speedrun">Speedrun (+50% ≤15 min)</option>
                 <option value="perfect_day">Día perfecto</option>
+                <option value="cooperative_day">Día cooperativo (+25%)</option>
+                <option value="combo_rooms">Combo habitaciones (+20%)</option>
+                <option value="master_maintenance">Mantenimiento maestro (+10%)</option>
               </select>
             </Field>
             <div className="field-row">

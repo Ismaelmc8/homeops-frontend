@@ -10,6 +10,12 @@ export const authApi = {
   login: (body) =>
     apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
   me: () => apiFetch("/api/auth/me", { auth: true }),
+  resendActivation: (body) =>
+    apiFetch("/api/auth/resend-activation", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
   forgotPassword: (body) =>
     apiFetch("/api/auth/forgot-password", {
       method: "POST",
@@ -27,6 +33,26 @@ export const metaApi = {
       body: JSON.stringify(body),
       headers: { "Content-Type": "application/json" },
     }),
+};
+
+export const smartApi = {
+  settings: () => apiFetch("/api/smart/settings", { auth: true }),
+  updateSettings: (body) =>
+    apiFetch("/api/smart/settings", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  updatePrefs: (body) =>
+    apiFetch("/api/smart/prefs", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  markRead: (id) =>
+    apiFetch(`/api/smart/notifications/${id}/read`, { method: "POST", auth: true }),
 };
 
 export const visualizationApi = {
@@ -166,7 +192,34 @@ export const eventsApi = {
 
 export const goalsApi = {
   weekly: () => apiFetch("/api/goals/weekly", { auth: true }),
+  updateWeekly: (body) =>
+    apiFetch("/api/goals/weekly", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
   claim: () => apiFetch("/api/goals/weekly/claim", { method: "POST", auth: true }),
+};
+
+export const rpgApi = {
+  profile: () => apiFetch("/api/rpg/profile", { auth: true }),
+  setSpecialization: (specialization) =>
+    apiFetch("/api/rpg/specialization", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify({ specialization }),
+      headers: { "Content-Type": "application/json" },
+    }),
+  equipTitle: (titleKey) =>
+    apiFetch("/api/rpg/title", {
+      method: "PUT",
+      auth: true,
+      body: JSON.stringify({ titleKey }),
+      headers: { "Content-Type": "application/json" },
+    }),
+  purchase: (key) => apiFetch(`/api/rpg/shop/${key}/purchase`, { method: "POST", auth: true }),
+  revokeSessions: () => apiFetch("/api/rpg/revoke-sessions", { method: "POST", auth: true }),
 };
 
 export const socialApi = {

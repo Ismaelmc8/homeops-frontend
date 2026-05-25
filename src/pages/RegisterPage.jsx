@@ -53,7 +53,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await authApi.register({ email, name, homeName });
-      navigate("/revisa-correo", { state: { devLink: res.devLink } });
+      navigate("/revisa-correo", { state: { devLink: res.devLink, email: email.trim() } });
     } catch (err) {
       setError(err.message || "Error en el registro");
     } finally {

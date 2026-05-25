@@ -8,6 +8,7 @@ export default function CompletionFeedbackModal({ task, onSubmit, onClose, submi
   const [emoji, setEmoji] = useState("");
   const [tags, setTags] = useState([]);
   const [durationActual, setDurationActual] = useState("");
+  const [qualityRating, setQualityRating] = useState(0);
 
   useEffect(() => {
     socialApi.catalog().then(setCatalog).catch(() => {});
@@ -27,6 +28,7 @@ export default function CompletionFeedbackModal({ task, onSubmit, onClose, submi
       feedbackChip: chip || null,
       feedbackEmoji: emoji || null,
       tags,
+      qualityRating: qualityRating >= 1 ? qualityRating : null,
     });
   }
 
@@ -98,6 +100,22 @@ export default function CompletionFeedbackModal({ task, onSubmit, onClose, submi
               </div>
             </div>
           )}
+
+          <div className="chip-group">
+            <span className="chip-group-label">Calidad (opcional, afecta bonus si ≥4)</span>
+            <div className="chip-row">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`chip-btn${qualityRating === n ? " chip-btn--active" : ""}`}
+                  onClick={() => setQualityRating(qualityRating === n ? 0 : n)}
+                >
+                  {n}★
+                </button>
+              ))}
+            </div>
+          </div>
 
           {catalog?.tags && (
             <div className="chip-group">

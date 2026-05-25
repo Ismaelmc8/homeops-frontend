@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { visualizationApi } from "../api/homeops.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const DIRT_CLASS = ["dirt-0", "dirt-1", "dirt-2", "dirt-3", "dirt-4", "dirt-5"];
 
@@ -150,11 +151,15 @@ function HeatmapPanel({ data }) {
 
 export default function MapPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tab, setTab] = useState("mapa");
   const [overview, setOverview] = useState(null);
   const [heatmap, setHeatmap] = useState(null);
   const [heatmapDays, setHeatmapDays] = useState(30);
   const [error, setError] = useState("");
+  const [layoutEdit, setLayoutEdit] = useState(false);
+  const [layoutDraft, setLayoutDraft] = useState([]);
+  const [layoutSaving, setLayoutSaving] = useState(false);
 
   const load = useCallback(async () => {
     const [ov, hm] = await Promise.all([
@@ -203,6 +208,13 @@ export default function MapPage() {
             {overview.stableZonesCount}/{overview.totalZones} zonas estables
           </span>
         </div>
+        {overview.homeXp != null && (
+          <div className="map-stat-card">
+            <span className="map-stat-label">XP del hogar</span>
+            <strong className="map-stat-value">{overview.homeXp}</strong>
+            <span className="map-stat-sub">{overview.activeMembers} miembro(s) activo(s)</span>
+          </div>
+        )}
         <div className={`map-stat-card map-stat-card--living meta-base--${overview.livingBase?.state ?? "stable"}`}>
           <span className="map-stat-label">Base viva</span>
           <strong className="map-stat-value">{overview.livingBase?.label ?? "—"}</strong>
@@ -242,6 +254,23 @@ export default function MapPage() {
         </section>
       )}
 
+      {overview.dirtPredictions?.length > 0 && (
+        <section className="smart-predictions-panel map-panel" aria-labelledby="predictions-title">
+          <h2 id="predictions-title" className="map-panel-title">Predicción de suciedad</h2>
+          <p className="map-panel-hint">Estimación a 2 días según tu historial local (reglas, no IA externa).</p>
+          <ul className="smart-predictions-list">
+            {overview.dirtPredictions.map((p) => (
+              <li key={p.zoneId} className={`smart-pred smart-pred--${p.confidence}`}>
+                <strong>{p.label}</strong>
+                <span className="smart-reason-inline" title={p.reason}>
+                  {p.confidence === "low" ? " · estimación básica" : ` · confianza ${p.confidence}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <ChaosGauge value={overview.chaosRisk} />
 
       <nav className="map-tabs" aria-label="Vistas del hogar">
@@ -263,8 +292,95 @@ export default function MapPage() {
 
       {tab === "mapa" && (
         <section className="map-panel" aria-labelledby="map-grid-title">
-          <h2 id="map-grid-title" className="map-panel-title">Plano del hogar</h2>
+          <div className="map-panel-head">
+            <h2 id="map-grid-title" className="map-panel-title">Plano del hogar</h2>
+            {user?.role === "admin" && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  if (!layoutEdit) {
+                    setLayoutDraft(
+                      overview.zones.map((z) => ({
+                        zoneId: z.id,
+                        gridCol: z.gridCol,
+                        gridRow: z.gridRow,
+                      }))
+                    );
+                    setLayoutEdit(true);
+                  } else {
+                    setLayoutEdit(false);
+                  }
+                }}
+              >
+                {layoutEdit ? "Cancelar edición" : "Editar disposición"}
+              </button>
+            )}
+          </div>
           <p className="map-panel-hint">El color indica suciedad. Las zonas en negro (nivel 5) muestran etiqueta clara.</p>
+          {layoutEdit ? (
+            <ul className="layout-editor-list">
+              {layoutDraft.map((item, idx) => {
+                const z = overview.zones.find((x) => x.id === item.zoneId);
+                return (
+                  <li key={item.zoneId}>
+                    <span>{z?.name}</span>
+                    <label>
+                      Col
+                      <input
+                        type="number"
+                        min={1}
+                        max={6}
+                        value={item.gridCol}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setLayoutDraft((d) =>
+                            d.map((x, i) => (i === idx ? { ...x, gridCol: v } : x))
+                          );
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Fila
+                      <input
+                        type="number"
+                        min={1}
+                        max={6}
+                        value={item.gridRow}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setLayoutDraft((d) =>
+                            d.map((x, i) => (i === idx ? { ...x, gridRow: v } : x))
+                          );
+                        }}
+                      />
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+          {layoutEdit && (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={layoutSaving}
+              onClick={async () => {
+                setLayoutSaving(true);
+                try {
+                  const updated = await visualizationApi.updateLayout(layoutDraft);
+                  setOverview(updated);
+                  setLayoutEdit(false);
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setLayoutSaving(false);
+                }
+              }}
+            >
+              {layoutSaving ? "Guardando…" : "Guardar layout"}
+            </button>
+          )}
           <HomeMapGrid zones={overview.zones} onSelect={(id) => navigate(`/mapa/zona/${id}`)} />
         </section>
       )}

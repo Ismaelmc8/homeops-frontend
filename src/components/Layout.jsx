@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
-/* ── Inline icons ─────────────────────────────── */
+/* ── Icons ─────────────────────────────────── */
 function IconHome() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -52,11 +52,19 @@ function IconSettings() {
 
 function IconCoin() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v8M9 10.5C9 9.1 10.3 8 12 8s3 1.1 3 2.5S13.7 13 12 13s-3 1.1-3 2.5S10.3 18 12 18s3-1.1 3-2.5" />
     </svg>
   );
+}
+
+/* ── User initials helper ──────────────── */
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 /* ── Nav item helper ──────────────────────────── */
@@ -82,9 +90,14 @@ export default function Layout() {
       {/* Top bar */}
       <header className="topbar" role="banner">
         <span className="topbar-brand">HomeOps</span>
-        <div className="topbar-coins" aria-label={`${user?.coins ?? 0} monedas`}>
-          <IconCoin />
-          <span>{user?.coins ?? 0}</span>
+        <div className="topbar-right">
+          <div className="topbar-coins" aria-label={`${user?.coins ?? 0} monedas`}>
+            <IconCoin />
+            <span>{user?.coins ?? 0}</span>
+          </div>
+          <div className="topbar-avatar" aria-hidden="true">
+            {initials(user?.name)}
+          </div>
         </div>
       </header>
 
